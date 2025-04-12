@@ -17,7 +17,7 @@
     }
     input[type="file"],
     button {
-      margin-bottom: 20px;
+      margin-bottom: 10px;
       display: block;
     }
     button {
@@ -27,6 +27,15 @@
       border: none;
       border-radius: 5px;
       cursor: pointer;
+    }
+    .notification {
+      display: none;
+      padding: 10px;
+      margin-bottom: 20px;
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      border-radius: 5px;
     }
     .gallery {
       display: flex;
@@ -48,17 +57,27 @@
   <h1>Supabase Image Upload Gallery</h1>
   <input type="file" id="imageInput" accept="image/*">
   <button id="uploadBtn">Upload</button>
+  <div class="notification" id="notification">✅ Image uploaded successfully!</div>
   <div class="gallery" id="gallery"></div>
 
   <script>
     const SUPABASE_URL = "https://buajsezdakisbrlnmain.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YWpzZXpkYWtpc2JybG5tYWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NDQ0MzYsImV4cCI6MjA2MDAyMDQzNn0.wuSTvwvLhtmHHCTAA0d1xk0FZqCWPA01rOiR7zTOcBA";
-    const BUCKET_NAME = "images";
+    const BUCKET_NAME = "imagegalleryapp";
 
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const imageInput = document.getElementById('imageInput');
     const uploadBtn = document.getElementById('uploadBtn');
     const gallery = document.getElementById('gallery');
+    const notification = document.getElementById('notification');
+
+    // Show notification temporarily
+    function showNotification() {
+      notification.style.display = 'block';
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 3000);
+    }
 
     // Load existing images
     async function loadImages() {
@@ -80,7 +99,7 @@
       }
     }
 
-    // Upload when button is clicked
+    // Upload image
     uploadBtn.addEventListener('click', async () => {
       const file = imageInput.files[0];
       if (!file) {
@@ -101,10 +120,11 @@
       img.src = urlData.publicUrl;
       gallery.appendChild(img);
 
-      imageInput.value = ""; // Clear input
+      imageInput.value = "";
+      showNotification(); // Show success notification
     });
 
-    // Initial load
+    // Initial image load
     loadImages();
   </script>
 
