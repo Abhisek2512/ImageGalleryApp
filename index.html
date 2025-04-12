@@ -15,27 +15,20 @@
     h1 {
       text-align: center;
     }
-    input[type="file"],
-    button {
-      margin-bottom: 10px;
+    input[type="file"], button {
+      margin: 10px 0;
       display: block;
     }
     button {
-      padding: 10px 20px;
-      background-color: #0077cc;
+      padding: 8px 15px;
+      background-color: #2b8a3e;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
-    .notification {
-      display: none;
-      padding: 10px;
-      margin-bottom: 20px;
-      background-color: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-      border-radius: 5px;
+    button:hover {
+      background-color: #237232;
     }
     .gallery {
       display: flex;
@@ -50,20 +43,29 @@
       border-radius: 8px;
       box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
     }
+    .notification {
+      display: none;
+      padding: 10px;
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      border-radius: 5px;
+      margin-bottom: 15px;
+    }
   </style>
 </head>
 <body>
 
   <h1>Supabase Image Upload Gallery</h1>
-  <input type="file" id="imageInput" accept="image/*">
-  <button id="uploadBtn">Upload</button>
   <div class="notification" id="notification">✅ Image uploaded successfully!</div>
+  <input type="file" id="imageInput" accept="image/*">
+  <button id="uploadBtn">Upload Image</button>
   <div class="gallery" id="gallery"></div>
 
   <script>
     const SUPABASE_URL = "https://buajsezdakisbrlnmain.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YWpzZXpkYWtpc2JybG5tYWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NDQ0MzYsImV4cCI6MjA2MDAyMDQzNn0.wuSTvwvLhtmHHCTAA0d1xk0FZqCWPA01rOiR7zTOcBA";
-    const BUCKET_NAME = "imagegalleryapp";
+    const BUCKET_NAME = "images";
 
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const imageInput = document.getElementById('imageInput');
@@ -71,35 +73,34 @@
     const gallery = document.getElementById('gallery');
     const notification = document.getElementById('notification');
 
-    // Show notification temporarily
-    function showNotification() {
-      notification.style.display = 'block';
-      setTimeout(() => {
-        notification.style.display = 'none';
-      }, 3000);
-    }
-
     // Load existing images
     async function loadImages() {
-      const { data: files, error } = await supabase.storage.from(BUCKET_NAME).list('', {
-        limit: 100,
-        sortBy: { column: 'created_at', order: 'desc' }
-      });
+      const { data: files, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
 
       if (error) {
-        console.error("Error loading images:", error);
+        console.error("Error loading images:", error.message);
         return;
       }
 
       for (const file of files) {
-        const { data: urlData } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name);
+        const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name);
         const img = document.createElement('img');
         img.src = urlData.publicUrl;
         gallery.appendChild(img);
       }
     }
 
-    // Upload image
+    // Show notification
+    function showNotification() {
+      notification.style.display = "block";
+      setTimeout(() => {
+        notification.style.display = "none";
+      }, 3000);
+    }
+
+    // Upload new image
     uploadBtn.addEventListener('click', async () => {
       const file = imageInput.files[0];
       if (!file) {
@@ -108,23 +109,26 @@
       }
 
       const filePath = `${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file);
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, file);
 
       if (uploadError) {
         alert("Upload failed: " + uploadError.message);
         return;
       }
 
-      const { data: urlData } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+      const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
       const img = document.createElement('img');
       img.src = urlData.publicUrl;
       gallery.appendChild(img);
 
       imageInput.value = "";
-      showNotification(); // Show success notification
+      showNotification();
     });
 
-    // Initial image load
+    // Initial load
     loadImages();
   </script>
 
