@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Supabase Image Upload Gallery</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 30px;
+      background: #f4f4f4;
+      padding: 20px;
       max-width: 800px;
       margin: auto;
-      background-color: #f9f9f9;
     }
     h1 {
       text-align: center;
@@ -20,28 +21,15 @@
       display: block;
     }
     button {
-      padding: 8px 15px;
-      background-color: #2b8a3e;
+      background-color: #007bff;
       color: white;
+      padding: 10px 16px;
       border: none;
-      border-radius: 5px;
+      border-radius: 4px;
       cursor: pointer;
     }
     button:hover {
-      background-color: #237232;
-    }
-    .gallery {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-    }
-    .gallery img {
-      width: 150px;
-      height: 150px;
-      object-fit: cover;
-      border: 2px solid #ccc;
-      border-radius: 8px;
-      box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+      background-color: #0056b3;
     }
     .notification {
       display: none;
@@ -50,16 +38,32 @@
       color: #155724;
       border: 1px solid #c3e6cb;
       border-radius: 5px;
-      margin-bottom: 15px;
+      margin: 10px 0;
+    }
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .gallery img {
+      width: 150px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 2px solid #ccc;
     }
   </style>
 </head>
 <body>
 
   <h1>Supabase Image Upload Gallery</h1>
-  <div class="notification" id="notification">✅ Image uploaded successfully!</div>
+
   <input type="file" id="imageInput" accept="image/*">
-  <button id="uploadBtn">Upload Image</button>
+  <button id="uploadButton">Upload Image</button>
+
+  <div class="notification" id="notification">✅ Image uploaded successfully!</div>
+
   <div class="gallery" id="gallery"></div>
 
   <script>
@@ -67,17 +71,27 @@
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YWpzZXpkYWtpc2JybG5tYWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NDQ0MzYsImV4cCI6MjA2MDAyMDQzNn0.wuSTvwvLhtmHHCTAA0d1xk0FZqCWPA01rOiR7zTOcBA";
     const BUCKET_NAME = "images";
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    const imageInput = document.getElementById('imageInput');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const gallery = document.getElementById('gallery');
-    const notification = document.getElementById('notification');
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Load existing images
+    const imageInput = document.getElementById("imageInput");
+    const uploadButton = document.getElementById("uploadButton");
+    const notification = document.getElementById("notification");
+    const gallery = document.getElementById("gallery");
+
+    function showNotification(msg) {
+      notification.textContent = msg;
+      notification.style.display = "block";
+      setTimeout(() => {
+        notification.style.display = "none";
+      }, 3000);
+    }
+
     async function loadImages() {
-      const { data: files, error } = await supabase.storage
+      gallery.innerHTML = "";
+      const { data: files, error } = await supabaseClient.storage
         .from(BUCKET_NAME)
-        .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+        .list("", { sortBy: { column: "created_at", order: "desc" } });
 
       if (error) {
         console.error("Error loading images:", error.message);
@@ -85,52 +99,34 @@
       }
 
       for (const file of files) {
-        const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name);
-        const img = document.createElement('img');
-        img.src = urlData.publicUrl;
+        const { data } = supabaseClient.storage.from(BUCKET_NAME).getPublicUrl(file.name);
+        const img = document.createElement("img");
+        img.src = data.publicUrl;
         gallery.appendChild(img);
       }
     }
 
-    // Show notification
-    function showNotification() {
-      notification.style.display = "block";
-      setTimeout(() => {
-        notification.style.display = "none";
-      }, 3000);
-    }
-
-    // Upload new image
-    uploadBtn.addEventListener('click', async () => {
+    uploadButton.addEventListener("click", async () => {
       const file = imageInput.files[0];
       if (!file) {
         alert("Please select an image first.");
         return;
       }
 
-      const filePath = `${Date.now()}-${file.name}`;
+      const fileName = `${Date.now()}-${file.name}`;
+      const { error } = await supabaseClient.storage.from(BUCKET_NAME).upload(fileName, file);
 
-      const { error: uploadError } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(filePath, file);
-
-      if (uploadError) {
-        alert("Upload failed: " + uploadError.message);
+      if (error) {
+        alert("Upload failed: " + error.message);
         return;
       }
 
-      const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-      const img = document.createElement('img');
-      img.src = urlData.publicUrl;
-      gallery.appendChild(img);
-
+      showNotification("✅ Image uploaded successfully!");
       imageInput.value = "";
-      showNotification();
+      loadImages();
     });
 
-    // Initial load
     loadImages();
   </script>
-
 </body>
 </html>
