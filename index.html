@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Supabase Image Upload Gallery</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      max-width: 800px;
+      margin: auto;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+    }
+    input[type="file"] {
+      margin-bottom: 20px;
+      display: block;
+    }
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .gallery img {
+      width: 150px;
+      height: 150px;
+      object-fit: cover;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Upload Image to Supabase Gallery</h1>
+  <input type="file" id="imageInput" accept="image/*">
+  <div class="gallery" id="gallery"></div>
+
+  <script>
+    const SUPABASE_URL = "https://buajsezdakisbrlnmain.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1YWpzZXpkYWtpc2JybG5tYWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NDQ0MzYsImV4cCI6MjA2MDAyMDQzNn0.wuSTvwvLhtmHHCTAA0d1xk0FZqCWPA01rOiR7zTOcBA"; // ⬅️ Replace this with your actual anon key
+    const BUCKET_NAME = "images";
+
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const imageInput = document.getElementById('imageInput');
+    const gallery = document.getElementById('gallery');
+
+    // Load existing images
+    async function loadImages() {
+      const { data: files, error } = await supabase.storage.from(BUCKET_NAME).list('', {
+        limit: 100,
+        sortBy: { column: 'created_at', order: 'desc' }
+      });
+
+      if (error) {
+        console.error("Error loading images:", error);
+        return;
+      }
+
+      for (const file of files) {
+        const { data: urlData } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name);
+        const img = document.createElement('img');
+        img.src = urlData.publicUrl;
+        gallery.appendChild(img);
+      }
+    }
+
+    // Upload new image
+    imageInput.addEventListener('change', async function () {
+      const file = this.files[0];
+      if (!file) return;
+
+      const filePath = `${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file);
+
+      if (uploadError) {
+        alert("Upload failed: " + uploadError.message);
+        return;
+      }
+
+      const { data: urlData } = await supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+      const img = document.createElement('img');
+      img.src = urlData.publicUrl;
+      gallery.appendChild(img);
+    });
+
+    // Initial load
+    loadImages();
+  </script>
+
+</body>
+</html>
